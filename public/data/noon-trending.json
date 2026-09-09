@@ -1,0 +1,14 @@
+[
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/IPhone_16_Pro_Max_(54252162478).jpg?width=400", "name":"آيفون 16 برو ماكس", "cat":"جوالات", "q":"ايفون 16 برو ماكس", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/SAMSUNG_Galaxy_S24_Ultra_(2).jpg?width=400", "name":"سامسونج جالكسي S24 Ultra", "cat":"جوالات", "q":"سامسونج جالكسي S24 Ultra", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/Air_Fryer_5458.jpg?width=400", "name":"قلاية هوائية ديجيتال", "cat":"منزل ومطبخ", "q":"قلاية هوائية ديجيتال", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/Airfryer.jpg?width=400", "name":"قلاية هوائية كبيرة 8 لتر", "cat":"منزل ومطبخ", "q":"قلاية هوائية 8 لتر", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/Apple_airpods_pro.jpg?width=400", "name":"سماعات ايربودز برو", "cat":"إلكترونيات", "q":"سماعات ايربودز برو", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/Bluetooth_headset.jpg?width=400", "name":"سماعة بلوتوث رياضية", "cat":"إلكترونيات", "q":"سماعة بلوتوث رياضية", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/Apple_Watch_Series_10.jpg?width=400", "name":"ساعة ابل الجيل العاشر", "cat":"إلكترونيات", "q":"ساعة ابل الجيل العاشر", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/Smartwatch.jpg?width=400", "name":"ساعة ذكية رياضية", "cat":"رياضة", "q":"ساعة ذكية رياضية", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/Perfume_Bottles.JPG?width=400", "name":"عطر رجالي فاخر", "cat":"جمال وعطور", "q":"عطر رجالي فاخر", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/Vintage_Atomizer_Perfume_Bottle.JPG?width=400", "name":"عطر نسائي فرنسي", "cat":"جمال وعطور", "q":"عطر نسائي فرنسي", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/National_Museum_of_Ethnology,_Osaka_-_Dress_(abaya)_and_veil_(tarha)_-_Cairo_in_Egypt_-_Collected_in_2002.jpg?width=400", "name":"عباية سوداء أنيقة", "cat":"موضة", "q":"عباية سوداء أنيقة", "price":null, "amazonLink":null, "noon":null },
+  { "img":"https://commons.wikimedia.org/wiki/Special:FilePath/T_Shirt.jpg?width=400", "name":"تيشيرت رجالي قطن", "cat":"موضة", "q":"تيشيرت رجالي قطن", "price":null, "amazonLink":null, "noon":null }
+]

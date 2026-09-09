@@ -28,7 +28,7 @@ const path = require("path");
 
 const NOON_AFFILIATE_CODE = "I0Rypnf1mm8"; // نفس الكود المستخدم في الموقع
 const SOURCE_URL = "https://www.noon.com/_svc/catalog/api/v3/search?q=best";
-const OUTPUT_PATH = path.join(__dirname, "..", "data", "noon-trending.json");
+const OUTPUT_PATH = path.join(__dirname, "..", "public", "data", "noon-trending.json");
 const MAX_PRODUCTS = 12;
 
 // نفس منطق toNoonAffiliateLink الموجود في index.html — لازم يفضلوا متطابقين
