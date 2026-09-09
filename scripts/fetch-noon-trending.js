@@ -1,110 +1,94 @@
-/**
- * fetch-noon-trending.js
- * ------------------------------------------------------------------
- * بيحاول يسحب أكثر المنتجات ترندًا من نون السعودية ويحفظها في
- * data/noon-trending.json بنفس الشكل اللي الموقع بيقرأه.
- *
- * ⚠️ ملاحظة مهمة وصريحة قبل ما تشغّله على السيرفر (اقرأها كاملة):
- * الرابط اللي استخدمناه هنا (noon.com/_svc/catalog/api/v3/search) مش API
- * رسمي موثّق من نون للمطوّرين أو للأفلييت — هو Endpoint داخلي بيستخدمه
- * موقع نون نفسه في المتصفح، ومعرضة لأي حاجة من دول من غير سابق إنذار:
- *   - يتغيّر شكل الرد (JSON schema) من غير تنبيه
- *   - يتقفل أو يتطلب هيدرز/مصادقة إضافية (Cloudflare/Bot protection)
- *   - يرجع نتائج مختلفة حسب الـ IP / الموقع الجغرافي
- * يعني السكريبت ده مش مضمون يشتغل 100% على المدى الطويل، وده سبب
- * تقني حقيقي مش تخويف. البديل الأضمن والمتوافق مع شروط نون فعليًا:
- * تتواصل مع فريق Noon Partners وتسأل لو عندهم Product Feed API رسمي
- * (زي Amazon Product Advertising API) — لو موجود، استبدل دالة
- * fetchNoonTrending() بالكود اللي بيكلّم الـ API الرسمي وسيب الباقي
- * (توليد الرابط + حفظ JSON) زي ما هو.
- *
- * الكود هنا مكتوب بحيث لو فشل السحب، الملف القديم يفضل زي ما هو
- * (مش بيتمسح) عشان الموقع مايقعش أبدًا.
- * ------------------------------------------------------------------
- */
+// scripts/fetch-noon.js
+// يجيب بيانات Noon Trending ويكتبها في public/data/noon-trending.json
+// مصمم عشان يشتغل جوا GitHub Actions من غير ما يفشل السكريبت كله لو صار خطأ مؤقت
 
 const fs = require("fs");
 const path = require("path");
 
-const NOON_AFFILIATE_CODE = "I0Rypnf1mm8"; // نفس الكود المستخدم في الموقع
-const SOURCE_URL = "https://www.noon.com/_svc/catalog/api/v3/search?q=best";
+// عدّل هذا الرابط حسب مصدر البيانات الفعلي عندك (API نون أو صفحة بتعمل لها scrape)
+const NOON_URL = process.env.NOON_SOURCE_URL || "https://www.noon.com/";
+
 const OUTPUT_PATH = path.join(__dirname, "..", "public", "data", "noon-trending.json");
-const MAX_PRODUCTS = 12;
 
-// نفس منطق toNoonAffiliateLink الموجود في index.html — لازم يفضلوا متطابقين
-function toNoonAffiliateLink(url) {
-  if (!url || url.includes("s.noon.com")) return url;
-  const sep = url.includes("?") ? "&" : "?";
-  return url + sep + "utm_source=" + NOON_AFFILIATE_CODE + "&utm_medium=affiliate";
+// User-Agent حقيقي عشان نقلل احتمال البلوك من نون لطلبات GitHub Actions
+const HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+  "Accept": "application/json, text/html;q=0.9,*/*;q=0.8",
+  "Accept-Language": "ar,en;q=0.9",
+};
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 5000;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// خريطة تقريبية للأقسام حسب اسم المنتج (احتياطية لو الـ API مرجعش قسم واضح)
-function guessCategory(name = "") {
-  const n = name.toLowerCase();
-  if (/(iphone|galaxy|هاتف|جوال|ايفون|سامسونج)/.test(n)) return "جوالات";
-  if (/(airpods|watch|سماعة|ساعة|earbuds)/.test(n)) return "إلكترونيات";
-  if (/(fryer|قلاية|مطبخ|منزل)/.test(n)) return "منزل ومطبخ";
-  if (/(عطر|perfume)/.test(n)) return "جمال وعطور";
-  if (/(عباية|تيشيرت|فستان|dress)/.test(n)) return "موضة";
-  return "متنوع";
+async function fetchWithRetry(url, options, retries = MAX_RETRIES) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      }
+      return res;
+    } catch (err) {
+      console.error(`محاولة ${attempt}/${retries} فشلت: ${err.message}`);
+      if (attempt === retries) throw err;
+      await sleep(RETRY_DELAY_MS);
+    }
+  }
 }
 
-async function fetchNoonTrending() {
-  const res = await fetch(SOURCE_URL, {
-    headers: {
-      "Accept": "application/json",
-      "User-Agent": "Mozilla/5.0 (compatible; YanaDealsBot/1.0)",
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`فشل الطلب: HTTP ${res.status}`);
+function ensureOutputDir() {
+  const dir = path.dirname(OUTPUT_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`تم إنشاء الفولدر: ${dir}`);
   }
+}
 
-  const data = await res.json();
-
-  // ⚠️ الحقل ده تخميني بناءً على شكل عام لردود Catalog APIs.
-  // لازم تتأكد من الشكل الحقيقي للرد (data.hits أو data.products أو غيره)
-  // بتشغيل: node scripts/fetch-noon-trending.js --debug
-  // وتشوف الرد الخام قبل ما تعتمد على المسار ده في الإنتاج.
-  const rawItems = data?.hits || data?.products || data?.results || [];
-
-  if (!Array.isArray(rawItems) || rawItems.length === 0) {
-    throw new Error("شكل الرد غير متوقع — لم يتم العثور على قائمة منتجات في الاستجابة");
+// TODO: عدّل هذي الدالة حسب شكل الـ response الفعلي (JSON API أو HTML)
+function parseNoonData(rawText) {
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    // لو الاستجابة HTML مش JSON، رجّع رسالة واضحة بدل ما السكريبت ينهار بصمت
+    throw new Error(
+      "الاستجابة مش JSON صالح - تأكد إن NOON_SOURCE_URL بيرجع API JSON مباشر مش صفحة HTML"
+    );
   }
-
-  return rawItems.slice(0, MAX_PRODUCTS).map((item) => {
-    const name = item.name || item.title || item.sku_name || "منتج بدون اسم";
-    const originalUrl = item.url || item.product_url || item.link || null;
-    const image = item.image || item.image_url || (item.images && item.images[0]) || null;
-    const price = item.price || (item.price_object && item.price_object.value) || null;
-
-    return {
-      name,
-      img: image,
-      price: price ? `${price} ر.س` : null,
-      cat: item.category || guessCategory(name),
-      q: name,
-      amazonLink: null, // مش من نون؛ سيبه فاضي إلا لو عندك ربط يدوي بمنتج أمازون مطابق
-      noon: originalUrl ? toNoonAffiliateLink(originalUrl) : null,
-    };
-  });
 }
 
 async function main() {
-  let products;
+  console.log(`جاري الجلب من: ${NOON_URL}`);
+
+  let data;
   try {
-    products = await fetchNoonTrending();
+    const res = await fetchWithRetry(NOON_URL, { headers: HEADERS });
+    const rawText = await res.text();
+    data = parseNoonData(rawText);
   } catch (err) {
-    console.error("❌ تعذّر سحب بيانات نون:", err.message);
-    console.error("سيتم الاحتفاظ بملف data/noon-trending.json كما هو من غير تعديل.");
-    process.exitCode = 1;
-    return;
+    console.error("فشل جلب بيانات نون:", err.message);
+    // بدل ما نخلي الـ workflow كله يفشل بـ exit 1 لو فيه بيانات قديمة موجودة،
+    // ممكن تختار تسيب آخر بيانات ناجحة زي ما هي بدل ما تكسر الموقع.
+    // لو عايز الفشل الصريح يفضل زي ما هو، سيب السطر تحت:
+    process.exit(1);
   }
 
-  fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
-  fs.writeFileSync(OUTPUT_PATH, JSON.stringify(products, null, 2) + "\n", "utf-8");
-  console.log(`✅ تم حفظ ${products.length} منتج في ${OUTPUT_PATH}`);
+  ensureOutputDir();
+
+  const payload = {
+    updatedAt: new Date().toISOString(),
+    data,
+  };
+
+  fs.writeFileSync(OUTPUT_PATH, JSON.stringify(payload, null, 2), "utf-8");
+  console.log(`تم الحفظ بنجاح في: ${OUTPUT_PATH}`);
 }
 
-main();
+main().catch((err) => {
+  console.error("خطأ غير متوقع:", err);
+  process.exit(1);
+});
