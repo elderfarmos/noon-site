@@ -2,32 +2,44 @@ name: Update Noon Trending
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # كل 6 ساعات
-  workflow_dispatch:         # يسمح بتشغيله يدوياً من تبويب Actions للاختبار
+    - cron: "0 */6 * * *" # كل 6 ساعات
+  workflow_dispatch: # تشغيل يدوي
 
 permissions:
-  contents: write            # ضروري عشان يقدر يعمل commit/push
+  contents: write # ضروري عشان يقدر يعمل push
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
-          node-version: "22"   # LTS حالي - بيلغي تحذير Node 20 نهائياً
+          node-version: "20"
 
       - name: Run fetch-noon script
-        run: node scripts/fetch-noon.js
+        run: |
+          echo "الملفات الموجودة في scripts:"
+          ls -la scripts/
+          echo "---"
+          mkdir -p public/data
+          if [ -f "scripts/fetch-noon.js" ]; then
+            node scripts/fetch-noon.js
+          elif [ -f "scripts/fetch-noon-trending.js" ]; then
+            node scripts/fetch-noon-trending.js
+          else
+            echo "❌ ما لقيت ملف السكربت!"
+            exit 1
+          fi
 
       - name: Commit and push if data changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/noon-trending.json
+          git add public/data/ public/ -A 2>/dev/null || git add.
           if git diff --cached --quiet; then
             echo "لا يوجد تغيير في البيانات - تخطي الـ commit"
           else
