@@ -2,47 +2,63 @@ name: Update Noon Trending
 
 on:
   schedule:
-    - cron: "0 */6 * * *" # كل 6 ساعات
-  workflow_dispatch: # تشغيل يدوي
+    - cron: "0 */6 * * *"   # كل 6 ساعات (UTC): 00:00, 06:00, 12:00, 18:00
+  workflow_dispatch:         # تشغيل يدوي من تبويب Actions عند الحاجة
+
+# يمنع تشغيل نسختين من نفس الـ workflow بنفس الوقت (لو حصل تشغيل يدوي
+# أثناء ما الـ schedule شغال، عشان ما يصير تضارب على نفس الـ branch)
+concurrency:
+  group: update-noon-trending
+  cancel-in-progress: false
 
 permissions:
-  contents: write # ضروري عشان يقدر يعمل push
+  contents: write
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # يجيب كامل تاريخ الـ commits، ضروري لـ pull --rebase الآمن
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
 
-      - name: Run fetch-noon script
-        run: |
-          echo "الملفات الموجودة في scripts:"
-          ls -la scripts/
-          echo "---"
-          mkdir -p public/data
-          if [ -f "scripts/fetch-noon.js" ]; then
-            node scripts/fetch-noon.js
-          elif [ -f "scripts/fetch-noon-trending.js" ]; then
-            node scripts/fetch-noon-trending.js
-          else
-            echo "❌ ما لقيت ملف السكربت!"
-            exit 1
-          fi
+      - name: Run fetch-noon-trending script
+        run: node scripts/fetch-noon-trending.js
 
       - name: Commit and push if data changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/ public/ -A 2>/dev/null || git add.
+
+          git add public/data/noon-trending.json public/data/.fetch-meta.json
+
           if git diff --cached --quiet; then
-            echo "لا يوجد تغيير في البيانات - تخطي الـ commit"
-          else
-            git commit -m "chore: update noon trending data [skip ci]"
-            git push
+            echo "لا يوجد تغيير في البيانات - تخطي الـ commit والـ push"
+            exit 0
+          fi
+
+          # مهم: بدون [skip ci] عشان push هذا يشغّل workflow نشر Cloudflare تلقائياً
+          git commit -m "chore: update noon trending data"
+
+          # يحل مشكلة rejected (fetch first): نجيب آخر تحديثات الريموت
+          # ونعيد ترتيب الـ commit فوقها قبل الـ push، مع إعادة محاولة
+          # لو حصل تضارب في نفس اللحظة (سباق نادر بين تشغيلتين)
+          push_with_retry() {
+            for attempt in 1 2 3; do
+              git pull --rebase origin main && git push origin main && return 0
+              echo "محاولة $attempt فشلت - إعادة المحاولة..."
+              sleep 5
+            done
+            return 1
+          }
+
+          if ! push_with_retry; then
+            echo "فشل الـ push بعد 3 محاولات"
+            exit 1
           fi
