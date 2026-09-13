@@ -1,0 +1,30 @@
+name: Deploy to Cloudflare
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "public/**"
+      - "wrangler.jsonc"
+  workflow_dispatch:   # يسمح بنشر يدوي عند الحاجة
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      # فعّل الخطوة هذي بس لو فعلاً عندك "build" script في package.json
+      # - name: Build site
+      #   run: npm run build
+
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
