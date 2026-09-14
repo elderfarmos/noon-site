@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "yana-deals-noon-fetcher",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+
+  "triggers": {
+    "crons": ["0 */6 * * *"]
+  },
+
+  "kv_namespaces": [
+    {
+      "binding": "NOON_KV",
+      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+    }
+  ]
+}
